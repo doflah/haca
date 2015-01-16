@@ -131,8 +131,10 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         } else {
             game.start = json["bs"].toString();
         }
-        QFile cachedAway (config_->cache_dir.c_str() + game.away.name.toLower().replace(" ", "") + "_logo.svgz");
-        QFile cachedHome (config_->cache_dir.c_str() + game.home.name.toLower().replace(" ", "") + "_logo.svgz");
+        QString away = game.away.name.toLower().replace(" ", "");
+        QString home = game.home.name.toLower().replace(" ", "");
+        QFile cachedAway (config_->cache_dir.c_str() + away + "_logo.svgz");
+        QFile cachedHome (config_->cache_dir.c_str() + home + "_logo.svgz");
         if (!cachedAway.exists()) {
             http::Request::Configuration configuration;
             configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
@@ -169,6 +171,36 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
             } catch (net::Error &) {
             }
         }
+        // This isn't really svg parsing, the source files just happen to be on nice line breaks
+        // so I can go line by line and copy the ones I care about
+        QFile combiner(config_->cache_dir.c_str() + away + "_" + home + ".svg");
+        if (cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
+            combiner.open(QFile::WriteOnly);
+            QTextStream inAway(&cachedAway), inHome(&cachedHome), out(&combiner);
+            QString line;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            inAway.readLine(); // consume the sizing information and replace it with our own
+            // make the image a bit larger so two team logos can fit
+            out << "	 width='36px' height='24px' viewBox='0 0 36 24' enable-background='new 0 0 36 24' xml:space='preserve'>" << endl;
+
+            out << "<g>" << endl;
+            while ((line = inAway.readLine()) != "</svg>") out << line << endl;
+            out << "</g>" << endl;
+
+            // consume the first few lines of the file
+            inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine();
+            out << "<g transform='translate(12, 8)'>" << endl;
+            while ((line = inHome.readLine()) != "</svg>") out << line << endl;
+            out << "</g>" << endl << "</svg>";
+
+            combiner.close();
+        }
+        cachedAway.close();
+        cachedHome.close();
+
         today.push_back(game);
     }
 

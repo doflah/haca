@@ -40,9 +40,8 @@ const static string TEMPLATE =
         "components": {
         "title": "title",
         "art" : {
-        "field": "awayLogo"
+        "field": "art"
         },
-        "mascot": "homeLogo",
         "subtitle": "subtitle"
         }
         }
@@ -107,13 +106,12 @@ void Query::run(sc::SearchReplyProxy const& reply) {
             res.set_uri(uri.arg(game.id).toStdString());
             res.set_title((game.away.name + " at " + game.home.name).toStdString());
 
-            std::string awayLogo = (config_->cache_dir.c_str() + game.away.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
-            std::string homeLogo = (config_->cache_dir.c_str() + game.home.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            QString away = game.away.name.toLower().replace(" ", "");
+            QString home = game.home.name.toLower().replace(" ", "");
+            std::string homeLogo = (config_->cache_dir.c_str() + away + "_" + home + ".svg").toStdString();
             // Set the rest of the attributes
             res["subtitle"] = game.start.toStdString();
             res["description"] = "";
-            res["awayLogo"] = awayLogo;
-            res["homeLogo"] = homeLogo;
             res.set_art(homeLogo);
 
             // Push the result
