@@ -171,44 +171,31 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
             } catch (net::Error &) {
             }
         }
+        // This isn't really svg parsing, the source files just happen to be on nice line breaks
+        // so I can go line by line and copy the ones I care about
         QFile combiner(config_->cache_dir.c_str() + away + "_" + home + ".svg");
         if (cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
-            QTextStream inAway(&cachedAway);
-            QTextStream inHome(&cachedHome);
             combiner.open(QFile::WriteOnly);
-            QTextStream out(&combiner);
-            out << inAway.readLine() << endl;
-            out << inAway.readLine() << endl;
-            out << inAway.readLine() << endl;
-            out << inAway.readLine() << endl;
-            out << inAway.readLine() << endl;
-
-            out << "<defs>\n\
-                   <clipPath id='triangle'>\n\
-                     <polygon points='0,0 0,16 24,0'/>\n\
-                   </clipPath>\n\
-                   <clipPath id='otherTriangle'>\n\
-                     <polygon points='24,16 0,16 24,0'/>\n\
-                   </clipPath>\n\
-               </defs>";
-
-            inAway.readLine(); // consume the opening g element
-            out << "<g clip-path='url(#triangle)'>" << endl;  // replace with a clipped g element
-
+            QTextStream inAway(&cachedAway), inHome(&cachedHome), out(&combiner);
             QString line;
-            do {
-                line = inAway.readLine();
-                out << line << endl;
-            } while (line != "</g>");
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            inAway.readLine(); // consume the sizing information and replace it with our own
+            // make the image a bit larger so two team logos can fit
+            out << "	 width='36px' height='24px' viewBox='0 0 36 24' enable-background='new 0 0 36 24' xml:space='preserve'>" << endl;
+
+            out << "<g>" << endl;
+            while ((line = inAway.readLine()) != "</svg>") out << line << endl;
+            out << "</g>" << endl;
 
             // consume the first few lines of the file
-            inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine();
-            out << "<g clip-path='url(#otherTriangle)'>" << endl; // replace with a clipped g element
-            do {
-                line = inHome.readLine();
-                out << line << endl;
-            } while (line != "</g>");
-            out << "</svg>";
+            inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine();
+            out << "<g transform='translate(12, 8)'>" << endl;
+            while ((line = inHome.readLine()) != "</svg>") out << line << endl;
+            out << "</g>" << endl << "</svg>";
+
             combiner.close();
         }
         cachedAway.close();
