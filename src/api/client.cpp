@@ -131,8 +131,10 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         } else {
             game.start = json["bs"].toString();
         }
-        QFile cachedAway (config_->cache_dir.c_str() + game.away.name.toLower().replace(" ", "") + "_logo.svgz");
-        QFile cachedHome (config_->cache_dir.c_str() + game.home.name.toLower().replace(" ", "") + "_logo.svgz");
+        QString away = game.away.name.toLower().replace(" ", "");
+        QString home = game.home.name.toLower().replace(" ", "");
+        QFile cachedAway (config_->cache_dir.c_str() + away + "_logo.svgz");
+        QFile cachedHome (config_->cache_dir.c_str() + home + "_logo.svgz");
         if (!cachedAway.exists()) {
             http::Request::Configuration configuration;
             configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
@@ -169,6 +171,49 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
             } catch (net::Error &) {
             }
         }
+        QFile combiner(config_->cache_dir.c_str() + away + "_" + home + ".svg");
+        if (cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
+            QTextStream inAway(&cachedAway);
+            QTextStream inHome(&cachedHome);
+            combiner.open(QFile::WriteOnly);
+            QTextStream out(&combiner);
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+            out << inAway.readLine() << endl;
+
+            out << "<defs>\n\
+                   <clipPath id='triangle'>\n\
+                     <polygon points='0,0 0,16 24,0'/>\n\
+                   </clipPath>\n\
+                   <clipPath id='otherTriangle'>\n\
+                     <polygon points='24,16 0,16 24,0'/>\n\
+                   </clipPath>\n\
+               </defs>";
+
+            inAway.readLine(); // consume the opening g element
+            out << "<g clip-path='url(#triangle)'>" << endl;  // replace with a clipped g element
+
+            QString line;
+            do {
+                line = inAway.readLine();
+                out << line << endl;
+            } while (line != "</g>");
+
+            // consume the first few lines of the file
+            inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine(); inHome.readLine();
+            out << "<g clip-path='url(#otherTriangle)'>" << endl; // replace with a clipped g element
+            do {
+                line = inHome.readLine();
+                out << line << endl;
+            } while (line != "</g>");
+            out << "</svg>";
+            combiner.close();
+        }
+        cachedAway.close();
+        cachedHome.close();
+
         today.push_back(game);
     }
 
