@@ -50,7 +50,7 @@ const static string TEMPLATE =
 
 Query::Query(const sc::CannedQuery &query, const sc::SearchMetadata &metadata,
              Config::Ptr config) :
-    sc::SearchQueryBase(query, metadata), client_(config) {
+    sc::SearchQueryBase(query, metadata), client_(config), config_(config) {
 }
 
 void Query::initScope() {
@@ -107,10 +107,8 @@ void Query::run(sc::SearchReplyProxy const& reply) {
             res.set_uri(uri.arg(game.id).toStdString());
             res.set_title((game.away.name + " at " + game.home.name).toStdString());
 
-            std::string awayLogo = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
-                                    game.away.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
-            std::string homeLogo = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
-                                    game.home.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            std::string awayLogo = (config_->cache_dir.c_str() + game.away.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            std::string homeLogo = (config_->cache_dir.c_str() + game.home.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
             // Set the rest of the attributes
             res["subtitle"] = game.start.toStdString();
             res["description"] = "";

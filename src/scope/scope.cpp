@@ -25,6 +25,10 @@ void Scope::start(string const&) {
     if (apiroot) {
         config_->apiroot = apiroot;
     }
+
+    std::stringstream str;
+    str << cache_directory() << "/";
+    config_->cache_dir = str.str();
 }
 
 void Scope::stop() {

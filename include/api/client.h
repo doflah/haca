@@ -13,6 +13,8 @@
 #include <QJsonDocument>
 #include <QDateTime>
 #include <QTimeZone>
+#include <QFile>
+#include <QTextStream>
 
 namespace api {
 

@@ -103,6 +103,9 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
            .arg(date.day(), 2, 10, QChar('0')).toStdString()}, {}, root, 15);
 
     QVariantList games = root.toVariant().toMap()["games"].toList();
+
+
+    auto client = http::make_client();
     for (int i = 0; i < games.size(); i++) {
         QVariantMap json = games.at(i).toMap();
         Game game;
@@ -127,6 +130,44 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
             }
         } else {
             game.start = json["bs"].toString();
+        }
+        QFile cachedAway (config_->cache_dir.c_str() + game.away.name.toLower().replace(" ", "") + "_logo.svgz");
+        QFile cachedHome (config_->cache_dir.c_str() + game.home.name.toLower().replace(" ", "") + "_logo.svgz");
+        if (!cachedAway.exists()) {
+            http::Request::Configuration configuration;
+            configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
+                    game.away.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            configuration.header.add("User-Agent", config_->user_agent);
+            auto request = client->head(configuration);
+            try {
+                auto response = request->execute(NULL);
+                if (response.status != http::Status::ok) {
+                    throw domain_error(response.body);
+                }
+                cachedAway.open(QFile::ReadWrite);
+                QTextStream out(&cachedAway);
+                out << response.body.c_str();
+                cachedAway.close();
+            } catch (net::Error &) {
+            }
+        }
+        if (!cachedHome.exists()) {
+            http::Request::Configuration configuration;
+            configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
+                    game.home.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            configuration.header.add("User-Agent", config_->user_agent);
+            auto request = client->head(configuration);
+            try {
+                auto response = request->execute(NULL);
+                if (response.status != http::Status::ok) {
+                    throw domain_error(response.body);
+                }
+                cachedHome.open(QFile::ReadWrite);
+                QTextStream out(&cachedHome);
+                out << response.body.c_str();
+                cachedHome.close();
+            } catch (net::Error &) {
+            }
         }
         today.push_back(game);
     }

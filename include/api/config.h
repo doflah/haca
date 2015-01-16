@@ -19,6 +19,9 @@ struct Config {
      * The custom HTTP user agent string for this library
      */
     std::string user_agent { "NHL Scope-board 0.1; " };
+
+    std::string cache_dir;
+
 };
 
 }

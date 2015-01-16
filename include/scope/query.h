@@ -27,6 +27,7 @@ public:
     void run(const unity::scopes::SearchReplyProxy &reply) override;
 
 private:
+    api::Config::Ptr config_;
     api::Client client_;
     void initScope();
     bool s_showScores;
