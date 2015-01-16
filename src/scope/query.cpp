@@ -101,14 +101,12 @@ void Query::run(sc::SearchReplyProxy const& reply) {
             // Create a result
             sc::CategorisedResult res(forecast_cat);
 
-            // We must have a URI
-            QString uri("http://www.nhl.com/gamecenter/en/icetracker?id=%1");
-            res.set_uri(uri.arg(game.id).toStdString());
+            res.set_uri(config_->track_url.arg(game.id).toStdString());
             res.set_title((game.away.name + " at " + game.home.name).toStdString());
 
             QString away = game.away.name.toLower().replace(" ", "");
             QString home = game.home.name.toLower().replace(" ", "");
-            std::string homeLogo = (config_->cache_dir.c_str() + away + "_" + home + ".svg").toStdString();
+            std::string homeLogo = (config_->game_logo.arg(home).arg(away)).toStdString();
             // Set the rest of the attributes
             res["subtitle"] = game.start.toStdString();
             res["description"] = "";

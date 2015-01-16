@@ -28,7 +28,9 @@ void Scope::start(string const&) {
 
     std::stringstream str;
     str << cache_directory() << "/";
-    config_->cache_dir = str.str();
+    config_->cache_dir = str.str().c_str();
+    config_->team_logo = config_->team_logo.arg(config_->cache_dir);
+    config_->game_logo = config_->game_logo.arg(config_->cache_dir);
 }
 
 void Scope::stop() {

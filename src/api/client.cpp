@@ -133,12 +133,11 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         }
         QString away = game.away.name.toLower().replace(" ", "");
         QString home = game.home.name.toLower().replace(" ", "");
-        QFile cachedAway (config_->cache_dir.c_str() + away + "_logo.svgz");
-        QFile cachedHome (config_->cache_dir.c_str() + home + "_logo.svgz");
+        QFile cachedAway (config_->team_logo.arg(away));
+        QFile cachedHome (config_->team_logo.arg(home));
         if (!cachedAway.exists()) {
             http::Request::Configuration configuration;
-            configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
-                    game.away.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            configuration.uri = config_->remote_logo.arg(game.away.name.toLower().replace(" ", "")).toStdString();
             configuration.header.add("User-Agent", config_->user_agent);
             auto request = client->head(configuration);
             try {
@@ -155,8 +154,7 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         }
         if (!cachedHome.exists()) {
             http::Request::Configuration configuration;
-            configuration.uri = ("http://cdn.nhle.com/nhl/images/logos/teams/" +
-                    game.home.name.toLower().replace(" ", "") + "_logo.svgz").toStdString();
+            configuration.uri = config_->remote_logo.arg(game.home.name.toLower().replace(" ", "")).toStdString();
             configuration.header.add("User-Agent", config_->user_agent);
             auto request = client->head(configuration);
             try {
@@ -173,7 +171,7 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         }
         // This isn't really svg parsing, the source files just happen to be on nice line breaks
         // so I can go line by line and copy the ones I care about
-        QFile combiner(config_->cache_dir.c_str() + away + "_" + home + ".svg");
+        QFile combiner(config_->game_logo.arg(home).arg(away));
         if (cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
             combiner.open(QFile::WriteOnly);
             QTextStream inAway(&cachedAway), inHome(&cachedHome), out(&combiner);
@@ -205,6 +203,20 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
     }
 
     qSort(today.begin(), today.end(), gameOrder);
+
+    QDir cache(config_->cache_dir);
+    QDateTime now = QDateTime::currentDateTime();
+
+    // remove game_ logos that are older than 72 hours, just to keep the cache clean
+    int seventy_two_hours = 72 * 60 * 60 * 1000;
+    QFileInfoList list = cache.entryInfoList(QDir::Dirs| QDir::Files | QDir::NoDotAndDotDot);
+    for (int i = 0; i < list.size(); i++) {
+        QFileInfo file = list.at(i);
+        if (file.fileName().startsWith("game") &&
+                now.currentMSecsSinceEpoch() - file.created().currentMSecsSinceEpoch() >  seventy_two_hours) {
+            QFile(file.absoluteFilePath()).remove();
+        }
+    }
 
     return (today);
 }

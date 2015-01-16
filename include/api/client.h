@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QDateTime>
 #include <QTimeZone>
+#include <QDir>
 #include <QFile>
 #include <QTextStream>
 
