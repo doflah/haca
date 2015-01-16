@@ -1,0 +1,15 @@
+{
+    "architecture": "@CLICK_ARCH@",
+    "description": "Displays NHL scores",
+    "framework": "ubuntu-sdk-14.10",
+    "hooks": {
+        "nhlscope": {
+            "apparmor": "nhlscope.apparmor",
+            "scope": "nhlscope"
+        }
+    },
+    "maintainer": "Dennis O'Flaherty <dennis.oflaherty@gmail.com>",
+    "name": "com.ubuntu.developer.doflah.haca",
+    "title": "NHL Scoreboard",
+    "version": "0.1"
+}
