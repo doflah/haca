@@ -15,8 +15,8 @@ install(
 )
 
 configure_file(
-  "${CMAKE_SOURCE_DIR}/data/logo.png"
-  "${CMAKE_CURRENT_BINARY_DIR}/logo.png"
+  "${CMAKE_SOURCE_DIR}/data/logo_net.svg"
+  "${CMAKE_CURRENT_BINARY_DIR}/logo_net.svg"
   @ONLY
   COPYONLY
 )
