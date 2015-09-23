@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-01-16 15:04-0500\n"
+"POT-Creation-Date: 2015-09-22 22:05-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,7 +25,14 @@ msgstr ""
 msgid "Check current and recent hockey scores"
 msgstr ""
 
-#. Register a category for the current weather, with the title we just built
-#: ../src/scope/query.cpp:97
-msgid "Schedule"
+#: ../src/scope/query.cpp:116
+msgid "Today"
+msgstr ""
+
+#: ../src/scope/query.cpp:124
+msgid "Tomorrow"
+msgstr ""
+
+#: ../src/scope/query.cpp:133
+msgid "Yesterday"
 msgstr ""

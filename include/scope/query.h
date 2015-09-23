@@ -5,6 +5,7 @@
 
 #include <unity/scopes/SearchQueryBase.h>
 #include <unity/scopes/ReplyProxyFwd.h>
+#include <unity/scopes/Category.h>
 
 namespace scope {
 
@@ -27,6 +28,9 @@ public:
     void run(const unity::scopes::SearchReplyProxy &reply) override;
 
 private:
+
+    unity::scopes::CategorisedResult buildResult(unity::scopes::Category::SCPtr cat, api::Client::Game game, bool abbr);
+
     api::Config::Ptr config_;
     api::Client client_;
     void initScope();

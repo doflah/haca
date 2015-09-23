@@ -42,21 +42,21 @@ public:
         QString start;
     };
 
-
-    /**
-     * A list of games
-     */
-    typedef std::deque<Game> GameList;
+    struct Schedule {
+        std::vector<Game> games;
+        QDate prev;
+        QDate date;
+        QDate next;
+    };
 
     Client(Config::Ptr config);
 
     virtual ~Client() = default;
 
     /**
-     * Get the weather forecast for the specified location and duration
+     * Get the schedule for a particular day
      */
-    virtual GameList gamesFor(QDate date, bool showScores);
-    virtual GameList games();
+    virtual Schedule gamesFor(QDate date, bool showScores);
 
     /**
      * Cancel any pending queries (this method can be called from a different thread)

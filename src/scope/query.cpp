@@ -21,21 +21,33 @@ using namespace api;
 using namespace scope;
 
 
-/**
- * Define the layout for the forecast results
- *
- * The icon size is small, and ask for the card layout
- * itself to be horizontal. I.e. the text will be placed
- * next to the image.
- */
 const static string TEMPLATE =
         R"(
 {
         "schema-version": 1,
         "template": {
         "category-layout": "grid",
+        "card-layout": "vertical",
+        "card-size": "small"
+        },
+        "components": {
+        "title": "title",
+        "art" : {
+        "field": "art"
+        },
+        "subtitle": "subtitle"
+        }
+        }
+        )";
+
+const static string TEMPLATE_TODAY =
+        R"(
+{
+        "schema-version": 1,
+        "template": {
+        "category-layout": "grid",
         "card-layout": "horizontal",
-        "card-size": "medium"
+        "card-size": "small"
         },
         "components": {
         "title": "title",
@@ -60,63 +72,69 @@ void Query::cancelled() {
     client_.cancel();
 }
 
+sc::CategorisedResult Query::buildResult(sc::Category::SCPtr cat, Client::Game game, bool full) {
+    sc::CategorisedResult res(cat);
+    res.set_uri(config_->track_url.arg(game.id).toStdString());
+    if (full) {
+        res.set_title((game.away.name + " at " + game.home.name).toStdString());
+    } else {
+        res.set_title((game.away.abbr + " at " + game.home.abbr).toStdString());
+    }
+
+    QString away = game.away.name.toLower().replace(" ", "");
+    QString home = game.home.name.toLower().replace(" ", "");
+    std::string homeLogo = (config_->game_logo.arg(home).arg(away)).toStdString();
+    res["long-title"] = (game.away.name + " at " + game.home.name).toStdString();
+    res["subtitle"] = game.start.toStdString();
+    res.set_art(homeLogo);
+
+    return (res);
+}
 
 void Query::run(sc::SearchReplyProxy const& reply) {
     initScope();
     try {
-        // Create the root department
-        sc::Department::SPtr today = sc::Department::create("", query(), "Today's Games");
-        sc::Department::SPtr yesterday = sc::Department::create("yesterday", query(), "Yesterday's Games");
-        sc::Department::SPtr tomorrow = sc::Department::create("tomorrow", query(), "Tomorrow's Games");
+        Client::Schedule today  = client_.gamesFor(QDate::currentDate(), s_showScores);
+        Client::Schedule next;
+        Client::Schedule prev;
 
-        today->set_subdepartments({yesterday, tomorrow});
-        reply->register_departments(today);
+        QDate nope;
 
-        // Start by getting information about the query
-        const sc::CannedQuery &query(sc::SearchQueryBase::query());
-
-        // Trim the query string of whitespace
-        string query_string = alg::trim_copy(query.query_string());
-
-        Client::GameList games;
-        if (!query.department_id().empty()) {
-            QDate date = QDate::currentDate();
-            if (query.department_id() == "yesterday") {
-                date = date.addDays(-1);
-            } else {
-                date = date.addDays(1);
-            }
-            games = client_.gamesFor(date, s_showScores);
-        } else if (query_string.empty()) {
-            games = client_.gamesFor(QDate::currentDate(), s_showScores);
-        } else {
-            // TODO: search filters for team
+        if (today.next != nope) {
+            next = client_.gamesFor(today.next, s_showScores);
         }
 
-        // Register a category for the current weather, with the title we just built
-        auto forecast_cat = reply->register_category("schedule", _("Schedule"), "", sc::CategoryRenderer(TEMPLATE));
+        if (today.prev != nope) {
+            prev = client_.gamesFor(today.prev, s_showScores);
+        }
 
-        // For each of the forecast days
-        for (const auto &game : games) {
-            // Create a result
-            sc::CategorisedResult res(forecast_cat);
+        // TODO: let user query for a specific team
+        //const sc::CannedQuery &query(sc::SearchQueryBase::query());
+        //string query_string = alg::trim_copy(query.query_string());
 
-            res.set_uri(config_->track_url.arg(game.id).toStdString());
-            res.set_title((game.away.name + " at " + game.home.name).toStdString());
+        if (today.games.size() > 0) {
+            auto cat = reply->register_category("schedule", _("Today"), "", sc::CategoryRenderer(TEMPLATE_TODAY));
+            for (const auto &game : today.games) {
+                sc::CategorisedResult res = buildResult(cat, game, true);
+                if (!reply->push(res)) return;
+            }
+        }
 
-            QString away = game.away.name.toLower().replace(" ", "");
-            QString home = game.home.name.toLower().replace(" ", "");
-            std::string homeLogo = (config_->game_logo.arg(home).arg(away)).toStdString();
-            // Set the rest of the attributes
-            res["subtitle"] = game.start.toStdString();
-            res["description"] = "";
-            res.set_art(homeLogo);
+        if (next.games.size() > 0) {
+            string label = today.date.daysTo(next.date) == 1 ? _("Tomorrow") : next.date.toString(Qt::SystemLocaleLongDate).toStdString();
+            auto cat = reply->register_category("next", label, "", sc::CategoryRenderer(TEMPLATE));
+            for (const auto &game : next.games) {
+                sc::CategorisedResult res = buildResult(cat, game, false);
+                if (!reply->push(res)) return;
+            }
+        }
 
-            // Push the result
-            if (!reply->push(res)) {
-                // If we fail to push, it means the query has been cancelled.
-                // So don't continue;
-                return;
+        if (prev.games.size() > 0) {
+            string label = prev.date.daysTo(today.date) == 1 ? _("Yesterday") : prev.date.toString(Qt::SystemLocaleLongDate).toStdString();
+            auto cat = reply->register_category("prev", label, "", sc::CategoryRenderer(TEMPLATE));
+            for (const auto &game : prev.games) {
+                sc::CategorisedResult res = buildResult(cat, game, false);
+                if (!reply->push(res)) return;
             }
         }
 

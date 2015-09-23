@@ -78,7 +78,7 @@ void Client::get(const net::Uri::Path &path,
         if (response.status != http::Status::ok) {
             throw domain_error(response.body);
         }
-        std::string body = padding == 0 ? response.body : response.body.substr(padding, response.body.size() - 2);
+        std::string body = padding == 0 ? response.body : response.body.substr(padding, response.body.size() - padding - 2);
         // Parse the JSON from the response
         root = QJsonDocument::fromJson(body.c_str());
 
@@ -95,15 +95,16 @@ QString inProgress("%1 (%2) - %3 (%4) / %5");
 QString awayWins("<b>%1 (%2)</b> - %3 (%4) / %5");
 QString homeWins("%1 (%2) - <b>%3 (%4)</b> / %5");
 
-Client::GameList Client::gamesFor(QDate date, bool showScores) {
+QString dateFormat("MM/dd/yyyy");
+
+Client::Schedule Client::gamesFor(QDate date, bool showScores) {
     QJsonDocument root;
-    GameList today;
+    Schedule schedule;
     get( { QString("%1-%2-%3.jsonp").arg(date.year())
            .arg(date.month(), 2, 10, QChar('0'))
            .arg(date.day(), 2, 10, QChar('0')).toStdString()}, {}, root, 15);
 
     QVariantList games = root.toVariant().toMap()["games"].toList();
-
 
     auto client = http::make_client();
     for (int i = 0; i < games.size(); i++) {
@@ -199,10 +200,14 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         cachedAway.close();
         cachedHome.close();
 
-        today.push_back(game);
+        schedule.games.push_back(game);
     }
 
-    qSort(today.begin(), today.end(), gameOrder);
+    schedule.date = date;
+    schedule.prev = QDate::fromString(root.toVariant().toMap()["prevDate"].toString(), dateFormat);
+    schedule.next = QDate::fromString(root.toVariant().toMap()["nextDate"].toString(), dateFormat);
+
+    qSort(schedule.games.begin(), schedule.games.end(), gameOrder);
 
     QDir cache(config_->cache_dir);
     QDateTime now = QDateTime::currentDateTime();
@@ -218,34 +223,7 @@ Client::GameList Client::gamesFor(QDate date, bool showScores) {
         }
     }
 
-    return (today);
-}
-
-Client::GameList Client::games() {
-    QJsonDocument root;
-
-    // Build a URI and get the contents.
-    get( { "SeasonSchedule-20142015.json" },{ }, root);
-    // e.g. http://live.nhl.com/GameData/SeasonSchedule-20142015.json
-
-    QTimeZone est("UTC-05:00");
-    GameList result;
-
-    QVariantList games = root.toVariant().toList();
-
-    for (int i = 0; i < games.size(); i++) {
-        QVariantMap gameJson = games.at(i).toMap();
-        Game game;
-        game.away = teamLookup[gameJson["a"].toString()];
-        game.home = teamLookup[gameJson["h"].toString()];
-        game.id = gameJson["id"].toInt();
-        //game.start = QDateTime::fromString(gameJson["est"].toString(), "yyyyMMdd hh:mm:ss");
-        //game.start.setTimeZone(est);
-        //game.start.setTimeSpec(Qt::TimeZone);
-        result.push_back(game);
-    }
-
-    return result;
+    return (schedule);
 }
 
 http::Request::Progress::Next Client::progress_report(

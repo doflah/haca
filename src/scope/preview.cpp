@@ -37,7 +37,7 @@ void Preview::run(sc::PreviewReplyProxy const& reply) {
     // Define the header section
     sc::PreviewWidget header("header", "header");
     // It has title and a subtitle properties
-    header.add_attribute_mapping("title", "title");
+    header.add_attribute_mapping("title", "long-title");
     header.add_attribute_mapping("subtitle", "subtitle");
 
     // Define the image section
