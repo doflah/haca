@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <core/net/http/request.h>
+#include <core/net/http/client.h>
 #include <core/net/uri.h>
 
 #include <QJsonDocument>
@@ -85,6 +86,9 @@ protected:
      */
     std::atomic<bool> cancelled_;
     std::map<QString, Team> teamLookup;
+
+private:
+    QString getTeamIcon(QString icon, std::shared_ptr<core::net::http::Client> client);
 };
 
 }

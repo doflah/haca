@@ -1,7 +1,6 @@
 #include <api/client.h>
 
 #include <core/net/error.h>
-#include <core/net/http/client.h>
 #include <core/net/http/content_type.h>
 #include <core/net/http/response.h>
 #include <QVariantMap>
@@ -91,6 +90,29 @@ bool gameOrder(const Client::Game &v1, const Client::Game &v2)
     return (v1.away.name < v2.away.name);
 }
 
+QString Client::getTeamIcon(QString icon, std::shared_ptr<http::Client> client) {
+    QString filename = config_->team_logo.arg(icon);
+    QFile cached(filename);
+    if (!cached.exists()) {
+        http::Request::Configuration configuration;
+        configuration.uri = config_->remote_logo.arg(icon).toStdString();
+        configuration.header.add("User-Agent", config_->user_agent);
+        auto request = client->head(configuration);
+        try {
+            auto response = request->execute(NULL);
+            if (response.status != http::Status::ok) {
+                throw domain_error(response.body);
+            }
+            cached.open(QFile::ReadWrite);
+            QTextStream out(&cached);
+            out << response.body.c_str();
+            cached.close();
+        } catch (net::Error &) {
+        }
+    }
+    return (filename);
+}
+
 QString inProgress("%1 (%2) - %3 (%4) / %5");
 QString awayWins("<b>%1 (%2)</b> - %3 (%4) / %5");
 QString homeWins("%1 (%2) - <b>%3 (%4)</b> / %5");
@@ -134,46 +156,12 @@ Client::Schedule Client::gamesFor(QDate date, bool showScores) {
         }
         QString away = game.away.name.toLower().replace(" ", "");
         QString home = game.home.name.toLower().replace(" ", "");
-        QFile cachedAway (config_->team_logo.arg(away));
-        QFile cachedHome (config_->team_logo.arg(home));
-        if (!cachedAway.exists()) {
-            http::Request::Configuration configuration;
-            configuration.uri = config_->remote_logo.arg(game.away.name.toLower().replace(" ", "")).toStdString();
-            configuration.header.add("User-Agent", config_->user_agent);
-            auto request = client->head(configuration);
-            try {
-                auto response = request->execute(NULL);
-                if (response.status != http::Status::ok) {
-                    throw domain_error(response.body);
-                }
-                cachedAway.open(QFile::ReadWrite);
-                QTextStream out(&cachedAway);
-                out << response.body.c_str();
-                cachedAway.close();
-            } catch (net::Error &) {
-            }
-        }
-        if (!cachedHome.exists()) {
-            http::Request::Configuration configuration;
-            configuration.uri = config_->remote_logo.arg(game.home.name.toLower().replace(" ", "")).toStdString();
-            configuration.header.add("User-Agent", config_->user_agent);
-            auto request = client->head(configuration);
-            try {
-                auto response = request->execute(NULL);
-                if (response.status != http::Status::ok) {
-                    throw domain_error(response.body);
-                }
-                cachedHome.open(QFile::ReadWrite);
-                QTextStream out(&cachedHome);
-                out << response.body.c_str();
-                cachedHome.close();
-            } catch (net::Error &) {
-            }
-        }
+        QFile cachedAway(getTeamIcon(away, client));
+        QFile cachedHome(getTeamIcon(home, client));
         // This isn't really svg parsing, the source files just happen to be on nice line breaks
         // so I can go line by line and copy the ones I care about
         QFile combiner(config_->game_logo.arg(home).arg(away));
-        if (cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
+        if (!combiner.exists() && cachedAway.open(QFile::ReadOnly) && cachedHome.open(QFile::ReadOnly)) {
             combiner.open(QFile::WriteOnly);
             QTextStream inAway(&cachedAway), inHome(&cachedHome), out(&combiner);
             QString line;
